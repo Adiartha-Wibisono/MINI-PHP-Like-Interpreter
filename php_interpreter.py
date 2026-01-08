@@ -12,16 +12,14 @@ class MiniPHPInterpreter:
         while i < len(lines):
             line = lines[i]
 
-            # assignment
+            # assignment luar IF
             if line.startswith("$") and "=" in line:
-                var, val = line.replace(";", "").split("=")
-                self.vars[var.strip()] = int(val.strip())
+                self._handle_assignment(line)
 
-            # IF
             elif line.startswith("IF"):
                 cond = re.search(r"\((.*?)\)", line).group(1)
                 left, right = cond.replace("$", "").split(">")
-                condition = int(self.vars["$"+left.strip()]) > int(self.vars["$"+right.strip()])
+                condition = self.vars["$"+left.strip()] > self.vars["$"+right.strip()]
 
                 i += 1
                 if condition:
@@ -38,21 +36,32 @@ class MiniPHPInterpreter:
                     while not lines[i].startswith("}"):
                         self._execute_line(lines[i])
                         i += 1
-
             i += 1
 
         return "\n".join(self.output)
 
     def _execute_line(self, line):
-        if line.startswith("PRINT"):
+        # assignment di dalam block
+        if line.startswith("$") and "=" in line:
+            self._handle_assignment(line)
+
+        elif line.startswith("PRINT"):
             text = line.replace("PRINT", "").replace(";", "")
             parts = text.split(".")
             result = ""
             for p in parts:
                 p = p.strip()
                 if p.startswith("$"):
-                    result += str(self.vars[p])
+                    result += str(self.vars.get(p, ""))
                 else:
                     result += p.replace('"', '')
             self.output.append(result)
 
+    def _handle_assignment(self, line):
+        var, val = line.replace(";", "").split("=")
+        var = var.strip()
+        val = val.strip()
+        if val.startswith("$"):
+            self.vars[var] = self.vars[val]
+        else:
+            self.vars[var] = int(val)
